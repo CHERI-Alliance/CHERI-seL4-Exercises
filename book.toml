@@ -1,10 +1,10 @@
 [book]
-authors = ["John Baldwin", "Jessica Clarke", "Brooks Davis", "Wes Filardo", "Robert N. M. Watson"]
+authors = ["John Baldwin", "Jessica Clarke", "Brooks Davis", "Wes Filardo", "Robert N. M. Watson", "Hesham Almatary"]
 language = "en"
 multilingual = false
 src = "src"
-title = "Adversarial CHERI Exercises and Missions"
+title = "Adversarial CHERI Exercises and Missions on CHERI-seL4 microkernel and CHERI-Microkit"
 
 [output.html]
-git-repository-url = "https://github.com/CTSRD-CHERI/cheri-exercises"
-site-url = "/cheri-exercises/"
+git-repository-url = "https://github.com/CHERI-Alliance/CHERI-seL4-Exercises"
+site-url = "/CHERI-seL4-Exercises/"
