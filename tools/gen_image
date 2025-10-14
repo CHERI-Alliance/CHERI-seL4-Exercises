@@ -11,98 +11,70 @@ QUIET=${QUIET:-0}
 
 # Print usage information
 usage() {
-    echo "Usage: $0 [-o output_image] input1 [input2 ...]"
+    echo "Usage: $0 [-a arch] [-o output_image] input1 [input2 ...]"
     echo ""
+    echo "  -a arch           Target architecture (riscv64, riscv64-purecap, morello-aarch64, morello-purecap)"
     echo "  -o output_image   Optional output image name (default: loader.img)"
     echo "  inputN            One or more input ELF (or binary) files"
     echo ""
     echo "Example:"
-    echo "  $0 -o myos.img hello foo bar"
+    echo "  $0 -a riscv64-purecap -o myos.img hello foo bar"
     exit 1
 }
 
 err()
 {
-	ret=$1
-	shift
-	echo >&2 "$@"
-	exit "$ret"
+    ret=$1
+    shift
+    echo >&2 "$@"
+    exit "$ret"
 }
 
 warn()
 {
-	echo >&2 "$@"
+    echo >&2 "$@"
 }
 
 debug()
 {
-	if [ "$VERBOSE" -ne 0 ]; then
-		echo >&2 "$@"
-	fi
+    if [ "$VERBOSE" -ne 0 ]; then
+        echo >&2 "$@"
+    fi
 }
 
 info()
 {
-	if [ "$QUIET" -eq 0 ]; then
-		echo >&2 "$@"
-	fi
+    if [ "$QUIET" -eq 0 ]; then
+        echo >&2 "$@"
+    fi
 }
 
 run()
 {
-	debug	# add space before normal multiline output
-	info "Running:" "$@"
-	"$@"
+    debug   # add space before normal multiline output
+    info "Running:" "$@"
+    "$@"
 }
 
 if [ $# -eq 0 ]; then
-	usage
+    usage
 fi
 
-cheri_sdk_name=cheri-alliance-sdk
-# Find our SDK, using the first of these that expands only defined variables:
-#  ${CHERIBUILD_SDK_${cheri_sdk_name}} (if that syntax worked)
-#  ${CHERIBUILD_SDK}
-#  ${CHERIBUILD_OUTPUT}/${cheri_sdk_name}
-#  ${CHERIBUILD_SOURCE}/output/${cheri_sdk_name}
-#  ~/cheri/output/${cheri_sdk_name}
-
-SDKDIR_SOURCE=${CHERIBUILD_SOURCE:-${HOME}/cheri}
-SDKDIR_OUTPUT=${CHERIBUILD_OUTPUT:-${SDKDIR_SOURCE}/output}
-SDKDIR_SDK=${CHERIBUILD_SDK:-${SDKDIR_OUTPUT}/${cheri_sdk_name}}
-SDKDIR=${SDKDIR:-${SDKDIR_SDK}}
-
-enverr()
-{
-	echo >&2 $1
-	echo "Perhaps set or adjust one of the following environment variables:"
-	for v in SOURCE OUTPUT SDK; do
-		echo " " CHERIBUILD_$v \(currently: \
-		  $(eval echo \${CHERIBUILD_$v:-unset, tried \$SDKDIR_$v})\)
-	done
-
-	err 1 "Please check your build environment"
-}
-
-SDK_MICROKIT=${CLANG:-${SDKDIR}/bin/clang}
-
-MICROKIT_SDK=${MICROKIT_SDK:-${SDKDIR}/baremetal/baremetal-riscv64-zpurecap/microkit-sdk-2.0.1-dev}
-if [ ! -d "$MICROKIT_SDK" ]; then
-       enverr "Microkit '$MICROKIT_SDK' does not exist." "MICROKIT_SDK"
-fi
-debug "microkit: $MICROKIT_SDK"
-
-MICROKIT_TOOL=${MICROKIT_SDK}/bin/microkit
-debug "MICROKIT_TOOL: $MICROKIT_TOOL"
-
-# Parse args
+# Defaults
+TARGET=""
 OUTPUT_FILE="generated.system"
 IMAGE_NAME="loader.img"
 INPUT_FILES=""
 SEARCH_PATH="$(pwd)"
 
+# Parse args
 while [ $# -gt 0 ]; do
     case "$1" in
+        -a)
+            shift
+            [ $# -eq 0 ] && echo "Error: -a requires an argument" && usage
+            TARGET="$1"
+            ;;
         -o)
             shift
             [ $# -eq 0 ] && echo "Error: -o requires an argument" && usage
@@ -120,6 +92,51 @@ while [ $# -gt 0 ]; do
 done
 
 [ -z "$INPUT_FILES" ] && echo "Error: No input files provided" && usage
+[ -z "$TARGET" ] && echo "Error: -a (arch) is required" && usage
+
+# Pick board + SDK based on architecture
+case "$TARGET" in
+    riscv64|riscv64-purecap)
+        BOARD="qemu_virt_riscv64"
+        cheri_sdk_name="cheri-alliance-sdk"
+        ;;
+    morello-aarch64|morello-purecap)
+        BOARD="morello_qemu"
+        cheri_sdk_name="morello-sdk"
+        ;;
+    *)
+        err 1 "Unknown target architecture: $TARGET"
+        ;;
+esac
+
+# SDK paths
+SDKDIR_SOURCE=${CHERIBUILD_SOURCE:-${HOME}/cheri}
+SDKDIR_OUTPUT=${CHERIBUILD_OUTPUT:-${SDKDIR_SOURCE}/output}
+SDKDIR_SDK=${CHERIBUILD_SDK:-${SDKDIR_OUTPUT}/${cheri_sdk_name}}
+SDKDIR=${SDKDIR:-${SDKDIR_SDK}}
+
+enverr()
+{
+    echo >&2 $1
+    echo "Perhaps set or adjust one of the following environment variables:"
+    for v in SOURCE OUTPUT SDK; do
+        echo " " CHERIBUILD_$v \(currently: \
+          $(eval echo \${CHERIBUILD_$v:-unset, tried \$SDKDIR_$v})\)
+    done
+
+    err 1 "Please check your build environment"
+}
+
+SDK_MICROKIT=${CLANG:-${SDKDIR}/bin/clang}
+
+MICROKIT_SDK=${MICROKIT_SDK:-${SDKDIR}/baremetal/baremetal-${TARGET}/microkit-sdk-2.0.1-dev}
+if [ ! -d "$MICROKIT_SDK" ]; then
+       enverr "Microkit '$MICROKIT_SDK' does not exist." "MICROKIT_SDK"
+fi
+debug "microkit: $MICROKIT_SDK"
+
+MICROKIT_TOOL=${MICROKIT_SDK}/bin/microkit
+debug "MICROKIT_TOOL: $MICROKIT_TOOL"
 
 # Generate XML
 {
@@ -136,6 +153,6 @@ done
 
 echo "Generated $OUTPUT_FILE from input files:$INPUT_FILES"
 echo "Running Microkit tool to generate image: $IMAGE_NAME"
-echo "$MICROKIT_TOOL $OUTPUT_FILE -o $IMAGE_NAME --search-path $SEARCH_PATH"
+echo "$MICROKIT_TOOL $OUTPUT_FILE -o $IMAGE_NAME --search-path $SEARCH_PATH --board $BOARD --config cheri"
 
-"$MICROKIT_TOOL" "$OUTPUT_FILE" -o "$IMAGE_NAME"  --search-path "$SEARCH_PATH" --board "qemu_virt_riscv64" --config "cheri"
+"$MICROKIT_TOOL" "$OUTPUT_FILE" -o "$IMAGE_NAME" --search-path "$SEARCH_PATH" --board "$BOARD" --config "cheri"

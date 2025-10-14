@@ -15,7 +15,7 @@ usage()
 $name <arch> [...]
 
 Supported architectures:
-	aarch64         - conventional AArch64
+	morello-aarch64 - conventional AArch64
 	morello-hybrid  - AArch64 Morello supporting CHERI
 	morello-purecap - AArch64 Morello pure-capability
 	riscv64         - conventional RISC-V 64-bit
@@ -69,36 +69,43 @@ shift
 cheri_arch_basename=${arch%%-*}
 cheri_sdk_name=sdk
 case $arch in
-aarch64)
+morello-aarch64)
 	cheri_arch_basename=morello
 	cheri_sdk_name=morello-sdk
-	arch_flags="-target aarch64-unknown-freebsd -march=morello+noa64c"
-    microkit_ldflags="-lmicrokit -lutils"
+	arch_flags="-target aarch64-none-elf -march=armv8"
+	microkit_ldflags="-lmicrokit -lutils"
+	board="morello_qemu"
+	arch="morello-aarch64"
 	;;
 morello-hybrid)
 	cheri_sdk_name=morello-sdk
 	arch_flags="-target aarch64-unknown-freebsd -march=morello -Xclang -morello-vararg=new"
-    microkit_ldflags="-lmicrokit -lutils"
+	microkit_ldflags="-lmicrokit -lutils"
+	board="morello_qemu"
 	;;
 morello-purecap)
 	cheri_sdk_name=morello-sdk
-	arch_flags="-target aarch64-unknown-freebsd -march=morello -mabi=purecap -Xclang -morello-vararg=new"
-    microkit_ldflags="-lmicrokit_purecap -lutils_purecap"
+	arch_flags="-target aarch64-none-elf -march=morello -mabi=purecap -Xclang -morello-vararg=new"
+	microkit_ldflags="-lmicrokit_purecap -lutils_purecap -Wl,--local-caprelocs=legacy"
+	board="morello_qemu"
 	;;
 riscv64)
 	cheri_sdk_name=cheri-alliance-sdk
 	arch_flags="-target riscv64-unknown-elf -march=rv64gc -mabi=lp64d -mno-relax"
-    microkit_ldflags="-lmicrokit -lutils"
+	microkit_ldflags="-lmicrokit -lutils"
+	board="qemu_virt_riscv64"
 	;;
 riscv64-hybrid)
 	cheri_sdk_name=cheri-alliance-sdk
 	arch_flags="-target riscv64-unknown-elf -march=rv64gc_zcherihybrid -mabi=lp64d -mno-relax"
-    microkit_ldflags="-lmicrokit -lutils"
+	microkit_ldflags="-lmicrokit -lutils"
+	board="qemu_virt_riscv64"
 	;;
 riscv64-purecap)
 	cheri_sdk_name=cheri-alliance-sdk
 	arch_flags="-target riscv64-unknown-elf -march=rv64gc_zcherihybrid -mabi=l64pc128d -mno-relax"
-    microkit_ldflags="-lmicrokit_purecap -lutils_purecap"
+	microkit_ldflags="-lmicrokit_purecap -lutils_purecap"
+	board="qemu_virt_riscv64"
 	;;
 *)
 	err 1 "Unsupported architecture '$arch'"
@@ -147,7 +154,7 @@ if [ ! -x "$prog" ]; then
 fi
 debug "prog: $prog"
 
-MICROKIT_SDK=${MICROKIT_SDK:-${SDKDIR}/baremetal/baremetal-riscv64-zpurecap/microkit-sdk-2.0.1-dev}
+MICROKIT_SDK=${MICROKIT_SDK:-${SDKDIR}/baremetal/baremetal-${arch}/microkit-sdk-2.0.1-dev}
 if [ ! -d "$MICROKIT_SDK" ]; then
        enverr "Microkit '$MICROKIT_SDK' does not exist." "MICROKIT_SDK"
 fi
@@ -161,7 +168,7 @@ debug "debug_flags: $debug_flags"
 opt_flags="-O2"
 debug "opt_flags: $opt_flags"
 
-microkit_flags="-L'$MICROKIT_SDK/board/qemu_virt_riscv64/cheri/lib' -I'$MICROKIT_SDK/board/qemu_virt_riscv64/cheri/include' -Tmicrokit.ld -nostdlib -ffreestanding"
+microkit_flags="-Wl,-L'$MICROKIT_SDK/board/$board/cheri/lib' -I'$MICROKIT_SDK/board/$board/cheri/include' -Wl,-Tmicrokit.ld -nostdlib -ffreestanding"
 debug "microkit_flags: $microkit_flags"
 
 linker_flags="-fuse-ld=lld"
