@@ -18,7 +18,7 @@ apt install libxml2-utils
 
 After you install the host dependencies, you can then build the CHERI-Microkit SDK. This will build LLVM, QEMU, OpenSBI, CHERI-seL4, and CHERI-Microkit. The easiest path to doing this is:
 ```
-cheribuild.py cheri-microkit-baremetal-riscv64-zpurecap --cheri-microkit/build_all -d
+cheribuild.py cheri-microkit-baremetal-riscv64-zpurecap -d
 ```
 This will churn away, prompting occasionally as it bootstraps assorted dependencies. It should build SDKs to get CHERI-LLVM, CHERI-QEMU, CHERI-GDB, RISC-V's OpenSBI, CHERI-seL4, and CHERI-Microkit SDK.
 <!-- XXX: Should we advocate `-f` here? -->
