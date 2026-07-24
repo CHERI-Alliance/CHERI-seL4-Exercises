@@ -1,6 +1,13 @@
 #include <stdint.h>
 #include <microkit.h>
 
+#if defined(BOARD_qemu_virt_riscv64)
+typedef uint8_t uart_reg_t;
+#elif defined(BOARD_ariane)
+typedef uint32_t uart_reg_t;
+#else
+#error "Unsupported board for the serial driver"
+#endif
 // This variable will have the address of the UART device
 uintptr_t uart_base_vaddr;
 
@@ -26,20 +33,20 @@ uintptr_t uart_base_vaddr;
 #define UART_LSR_THRE    BIT(5)   /* Transmitter Holding Register Empty */
 
 typedef volatile struct {
-    uint8_t rbr_dll_thr; /* 0x00 Receiver Buffer Register (Read Only)
-                           *   Divisor Latch (LSB)
-                           *   Transmitter Holding Register (Write Only)
-                           */
-    uint8_t dlm_ier;     /* 0x04 Divisor Latch (MSB)
-                           *   Interrupt Enable Register
-                           */
-    uint8_t iir_fcr;     /* 0x08 Interrupt Identification Register (Read Only)
-                           *    FIFO Control Register (Write Only)
-                           */
-    uint8_t lcr;         /* 0xC Line Control Register */
-    uint8_t mcr;         /* 0x10 MODEM Control Register */
-    uint8_t lsr;         /* 0x14 Line Status Register */
-    uint8_t msr;         /* 0x18 MODEM Status Register */
+    uart_reg_t rbr_dll_thr; /* 0x00 Receiver Buffer Register (Read Only)
+                             *   Divisor Latch (LSB)
+                             *   Transmitter Holding Register (Write Only)
+                             */
+    uart_reg_t dlm_ier;     /* 0x04 Divisor Latch (MSB)
+                             *   Interrupt Enable Register
+                             */
+    uart_reg_t iir_fcr;     /* 0x08 Interrupt Identification Register (Read Only)
+                             *   FIFO Control Register (Write Only)
+                             */
+    uart_reg_t lcr;         /* 0xC Line Control Register */
+    uart_reg_t mcr;         /* 0x10 MODEM Control Register */
+    uart_reg_t lsr;         /* 0x14 Line Status Register */
+    uart_reg_t msr;         /* 0x18 MODEM Status Register */
 } uart_regs_t;
 
 #define REG_PTR(base, offset) ((volatile uint32_t *)((base) + (offset)))

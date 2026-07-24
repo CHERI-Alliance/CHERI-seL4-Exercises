@@ -12,7 +12,7 @@ QUIET=${QUIET:-0}
 usage()
 {
 	cat <<EOF
-$name <arch> [...]
+$name <arch> <board> [...]
 
 Supported architectures:
 	morello-aarch64 - conventional AArch64
@@ -66,6 +66,11 @@ fi
 arch=$1
 shift
 
+if [ -n "${1:-}" ]; then
+  board="$1"
+  shift
+fi
+
 cheri_arch_basename=${arch%%-*}
 cheri_sdk_name=sdk
 case $arch in
@@ -74,38 +79,38 @@ morello-aarch64)
 	cheri_sdk_name=morello-sdk
 	arch_flags="-target aarch64-none-elf -march=armv8"
 	microkit_ldflags="-lmicrokit -lutils"
-	board="morello_qemu"
+	board="${board:-morello_qemu}"
 	arch="morello-aarch64"
 	;;
 morello-hybrid)
 	cheri_sdk_name=morello-sdk
 	arch_flags="-target aarch64-unknown-freebsd -march=morello -Xclang -morello-vararg=new"
 	microkit_ldflags="-lmicrokit -lutils"
-	board="morello_qemu"
+	board="${board:-morello_qemu}"
 	;;
 morello-purecap)
 	cheri_sdk_name=morello-sdk
 	arch_flags="-target aarch64-none-elf -march=morello -mabi=purecap -Xclang -morello-vararg=new"
 	microkit_ldflags="-lmicrokit_purecap -lutils_purecap -Wl,--local-caprelocs=legacy"
-	board="morello_qemu"
+	board="${board:-morello_qemu}"
 	;;
 riscv64)
 	cheri_sdk_name=cheri-alliance-sdk
 	arch_flags="-target riscv64-unknown-elf -march=rv64gc -mabi=lp64d -mno-relax"
 	microkit_ldflags="-lmicrokit -lutils"
-	board="qemu_virt_riscv64"
+	board="${board:-qemu_virt_riscv64}"
 	;;
 riscv64-hybrid)
 	cheri_sdk_name=cheri-alliance-sdk
 	arch_flags="-target riscv64-unknown-elf -march=rv64gc_zcherihybrid -mabi=lp64d -mno-relax"
 	microkit_ldflags="-lmicrokit -lutils"
-	board="qemu_virt_riscv64"
+	board="${board:-qemu_virt_riscv64}"
 	;;
 riscv64-purecap)
 	cheri_sdk_name=cheri-alliance-sdk
 	arch_flags="-target riscv64-unknown-elf -march=rv64gc_zcherihybrid -mabi=l64pc128d -mno-relax"
 	microkit_ldflags="-lmicrokit_purecap -lutils_purecap"
-	board="qemu_virt_riscv64"
+	board="${board:-qemu_virt_riscv64}"
 	;;
 *)
 	err 1 "Unsupported architecture '$arch'"
@@ -177,7 +182,7 @@ debug "linker_flags: $linker_flags"
 diag_flags="-Wall -Wcheri"
 debug "diag_flags: $diag_flags"
 
-all_flags="$arch_flags $debug_flags $opt_flags $linker_flags $diag_flags $microkit_flags $microkit_ldflags"
+all_flags="$arch_flags $debug_flags $opt_flags $linker_flags $diag_flags $microkit_flags $microkit_ldflags -DBOARD_$board "
 
 all_flags_rev=
 # shellcheck disable=SC2086 # intentional

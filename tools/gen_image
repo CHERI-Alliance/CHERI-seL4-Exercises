@@ -14,6 +14,7 @@ usage() {
     echo "Usage: $0 [-a arch] [-o output_image] input1 [input2 ...]"
     echo ""
     echo "  -a arch           Target architecture (riscv64, riscv64-purecap, morello-aarch64, morello-purecap)"
+    echo "  -b board          Target board (qemu_virt_riscv64, morello_qemu, ariane)"
     echo "  -o output_image   Optional output image name (default: loader.img)"
     echo "  inputN            One or more input ELF (or binary) files"
     echo ""
@@ -75,6 +76,11 @@ while [ $# -gt 0 ]; do
             [ $# -eq 0 ] && echo "Error: -a requires an argument" && usage
             TARGET="$1"
             ;;
+        -b)
+            shift
+            [ $# -eq 0 ] && echo "Error: -b requires an argument" && usage
+            BOARD="$1"
+            ;;
         -o)
             shift
             [ $# -eq 0 ] && echo "Error: -o requires an argument" && usage
@@ -97,11 +103,11 @@ done
 # Pick board + SDK based on architecture
 case "$TARGET" in
     riscv64|riscv64-purecap)
-        BOARD="qemu_virt_riscv64"
+        BOARD="${BOARD:-qemu_virt_riscv64}"
         cheri_sdk_name="cheri-alliance-sdk"
         ;;
     morello-aarch64|morello-purecap)
-        BOARD="morello_qemu"
+        BOARD="${BOARD:-morello_qemu}"
         cheri_sdk_name="morello-sdk"
         ;;
     *)
