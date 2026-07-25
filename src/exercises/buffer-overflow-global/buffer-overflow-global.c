@@ -5,8 +5,15 @@
 #include <stdint.h>
 #include <printf.h>
 
-char buffer[128];
-char c;
+struct globals {
+    char buffer[128];
+    char c;
+};
+
+struct globals globals;
+
+#define buffer globals.buffer
+#define c      globals.c
 
 #pragma weak fill_buf
 void
